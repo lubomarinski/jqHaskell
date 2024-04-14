@@ -23,8 +23,8 @@ isGenIndexable :: Filter -> Bool
 isGenIndexable Identity = True
 isGenIndexable (Parenthesis _) = True
 isGenIndexable (ObjectIndex _ _ _) = True 
-isGenIndexable (ArrayIndex _ _) = True 
-isGenIndexable (ArrayRange _ _ _) = True 
+isGenIndexable (ArrayIndex _ _ _) = True 
+isGenIndexable (ArrayRange _ _ _ _) = True 
 isGenIndexable _ = False 
 
 -- Indexing -- Objects
@@ -55,7 +55,8 @@ parseArrayGenIndex f =  do
                         _ <- token (char '[') 
                         n <- nat
                         _ <- token (char ']')
-                        return (ArrayIndex f n)
+                        q <- token (char '?') <|> return ' '
+                        return (ArrayIndex f n (q == '?'))
 
 parseArrayRange :: Filter -> Parser Filter
 parseArrayRange f = do
@@ -65,7 +66,8 @@ parseArrayRange f = do
                     _ <- token (char ':')
                     m <- nat
                     _ <- token (char ']')
-                    return (ArrayRange f n m)
+                    q <- token (char '?') <|> return ' '
+                    return (ArrayRange f n m (q == '?'))
 
 parseArrayIndex :: Filter -> Parser Filter
 parseArrayIndex f = parseArrayGenIndex f <|> parseArrayRange f
