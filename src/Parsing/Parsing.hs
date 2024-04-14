@@ -121,3 +121,24 @@ integer = token int
 
 symbol :: String -> Parser String
 symbol xs = token (string xs)
+
+
+-- String
+
+sitem :: Parser String
+sitem = do
+        x <- item
+        return [x]
+
+
+parseStringContent :: Parser String
+parseStringContent =   do 
+                        x <- ((string "\\\"") <|> sitem)
+                        xs <- (if x == "\"" then return "" else pure (\s -> x ++ s) <*> parseStringContent)
+                        return xs
+
+parseString :: Parser String
+parseString =  do 
+                _ <- char '\"'
+                s <- parseStringContent
+                return s

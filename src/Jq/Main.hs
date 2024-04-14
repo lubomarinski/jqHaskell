@@ -29,6 +29,8 @@ getInputs :: IO ([String], String)
 getInputs = do
   args <- getArgs
   toparse <- readInput
+  putStr (args !! 0)
+  putStr toparse
   return $ (args, toparse)
 
 main :: IO ()
