@@ -54,6 +54,7 @@ library
                        Jq.CParser
                        Jq.JParser
                        Jq.Parser
+                       Jq.NumFormat
 
   build-depends:       base >=4.14 && <4.18
 

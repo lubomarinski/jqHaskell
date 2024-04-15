@@ -2,6 +2,7 @@ module Jq.JParser where
 
 import Parsing.Parsing
 import Jq.Json
+import Jq.NumFormat
 
 -- JNull |
 -- JNumber Int |
@@ -13,8 +14,8 @@ import Jq.Json
 -- Number
 parseJNumber :: Parser JSON
 parseJNumber =  do 
-                n <- int
-                return (JNumber n)
+                (n, nf) <- parseNumber
+                return (JNumber n nf)
 
 -- Null
 parseJNull :: Parser JSON

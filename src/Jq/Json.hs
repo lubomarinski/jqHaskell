@@ -2,12 +2,12 @@ module Jq.Json where
 
 import Numeric
 import Data.Char
+import Jq.NumFormat
 
-data JNum = Int | Double
 
 data JSON =
     JNull |
-    JNumber Int |
+    JNumber Double NumFormat |
     JString String |
     JBool Bool |
     JArray [JSON] |
@@ -37,7 +37,7 @@ escapeControlChar c
 
 instance Show JSON where
   show (JNull) = "null"
-  show (JNumber n) = show n
+  show (JNumber n nf) = showNF n nf
   show (JString s) = "\"" ++ (s >>= escapeControlChar) ++ "\""
   show (JBool b) = if b then "true" else "false"
   show (JArray js) = nestedShow 1 (JArray js)
@@ -46,7 +46,7 @@ instance Show JSON where
 
 instance Eq JSON where
   JNull == JNull = True
-  JNumber x == JNumber y = x == y
+  JNumber x _ == JNumber y _ = x == y
   JString x == JString y = x == y
   JBool x == JBool y = x == y
   JArray x == JArray y = x == y
@@ -58,7 +58,7 @@ jsonNullSC :: JSON
 jsonNullSC = JNull
 
 jsonNumberSC :: Int -> JSON
-jsonNumberSC n = JNumber n
+jsonNumberSC n = JNumber (fromIntegral n) (NFDouble 0)
 
 jsonStringSC :: String -> JSON
 jsonStringSC s = JString s 

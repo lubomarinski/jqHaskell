@@ -6,6 +6,7 @@ module Parsing.Parsing (module Parsing.Parsing, module Control.Applicative) wher
 
 import Control.Applicative
 import Data.Char
+import Jq.NumFormat
 
 -- Basic definitions
 
@@ -124,7 +125,6 @@ symbol xs = token (string xs)
 
 
 -- String
-
 sitem :: Parser String
 sitem = do
         x <- item
@@ -142,3 +142,36 @@ parseString =  do
                 _ <- char '\"'
                 s <- parseStringContent
                 return s
+
+-- Number
+parseDouble :: Parser (Double, NumFormat)
+parseDouble =  do
+               wp <- some digit <|> return ""
+               d <- char '.' <|> return ' '
+               dp <- some digit <|> return ""
+               case (wp, d, dp) of
+                  ("", _, "") -> empty
+                  ("",'.', dp) -> return (read ("0." ++ dp), NFDouble (length dp))
+                  (wp, _, "") -> return (read wp, NFDouble 0)
+                  (wp,'.', dp) -> return (read (wp ++ "." ++ dp), NFDouble (length dp))
+                  _ -> empty
+
+parseE :: Parser (Double, NumFormat)
+parseE = do
+         (n, nf) <- parseDouble
+         _ <- char 'E' <|> char 'e'
+         s <- char '+' <|> char '-' <|> return ' '
+         e <- nat
+         let nnf =   (case nf of 
+                        (NFDouble 0) -> NFE
+                        _ -> NFDouble 0) 
+         return (read (show n ++ "E" ++ (if s == '-' then "-" else "") ++ show e), if s == '-' then NFDouble 0 else nnf)
+
+parsePosNumber :: Parser (Double, NumFormat)
+parsePosNumber = parseE <|> parseDouble
+
+parseNumber :: Parser (Double, NumFormat)
+parseNumber =  do
+               s <- char '-' <|> return ' '
+               (n, nf) <- parsePosNumber
+               return (if s == '-' then -n else n, nf)
