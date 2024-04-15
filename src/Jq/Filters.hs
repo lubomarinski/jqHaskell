@@ -1,11 +1,16 @@
 module Jq.Filters where
 
+import Jq.Json
+
 data Filter = 
   Identity |
   Parenthesis Filter |
-  ObjectIndex Filter String Bool |
-  ArrayIndex Filter Int Bool |
-  ArrayRange Filter Int Int Bool
+  GenIndex Filter Filter Bool |
+  ArrayRange Filter Filter Filter Bool |
+  FLiteral JSON |
+  FComma Filter Filter |
+  FPipe Filter Filter |
+  FRecDesc Filter
 
 
 instance Show Filter where
@@ -16,9 +21,12 @@ instance Show Filter where
 instance Eq Filter where
   Identity == Identity = True
   (Parenthesis x) == (Parenthesis y) = x == y
-  (ObjectIndex xf xs xb) == (ObjectIndex yf ys yb) = (xf == yf) && (xs == ys) && (xb == yb)
-  (ArrayIndex xf xn xb) == (ArrayIndex yf yn yb) = (xf == yf) && (xn == yn) && (xb == yb)
+  (GenIndex xf xi xb) == (GenIndex yf yi yb) = (xf == yf) && (xi == yi) && (xb == yb)
   (ArrayRange xf xn xm xb) == (ArrayRange yf yn ym yb) = (xf == yf) && (xn == yn) && (xm == ym) && (xb == yb)
+  (FLiteral xj) == (FLiteral yj) = xj == yj
+  (FComma xb xa) == (FComma yb ya) = (xb == yb) && (xa == ya)
+  (FPipe xb xa) == (FPipe yb ya) = (xb == yb) && (xa == ya)
+  (FRecDesc x) == (FRecDesc y) = x == y
   _ == _ = False
 
 data Config = ConfigC {filters :: Filter}

@@ -2,6 +2,15 @@ module Jq.CParser where
 
 import Parsing.Parsing
 import Jq.Filters
+import Jq.Json
+import Jq.JParser
+
+-- Literals
+parseLiterals :: Parser Filter
+parseLiterals = do
+                l <- parseJNull <|> parseJNumber <|> parseJString <|> parseJBool
+                return (FLiteral l)
+
 
 -- Identity
 parseIdentity :: Parser Filter
@@ -22,10 +31,24 @@ parseParenthesis =  do
 isGenIndexable :: Filter -> Bool
 isGenIndexable Identity = True
 isGenIndexable (Parenthesis _) = True
-isGenIndexable (ObjectIndex _ _ _) = True 
-isGenIndexable (ArrayIndex _ _ _) = True 
+isGenIndexable (GenIndex _ _ _) = True 
 isGenIndexable (ArrayRange _ _ _ _) = True 
 isGenIndexable _ = False 
+
+
+parseGenIndex :: Filter -> Parser Filter
+parseGenIndex f = do
+                  _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
+                  _ <- token (char '[') 
+                  i <- parseFilter <|> return (FLiteral JNothing)
+                  _ <- token (char ']')
+                  q <- token (char '?') <|> return ' '
+                  return (GenIndex f i (q == '?'))
+
+parseRecDesc :: Filter -> Parser Filter
+parseRecDesc f =  do
+                  _ <- symbol ".."
+                  return (FRecDesc f)
 
 -- Indexing -- Objects
 parseObjectIdIndex :: Filter -> Parser Filter
@@ -33,56 +56,48 @@ parseObjectIdIndex f =  do
                         _ <- token (char '.') <|> (if f == Identity then return '.' else empty)
                         k <- identifier <|> parseString
                         q <- token (char '?') <|> return ' '
-                        return (ObjectIndex f k (q == '?'))
-
-parseObjectGenIndex :: Filter -> Parser Filter
-parseObjectGenIndex f = do
-                        _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
-                        _ <- token (char '[') 
-                        k <- parseString
-                        _ <- token (char ']')
-                        q <- token (char '?') <|> return ' '
-                        return (ObjectIndex f k (q == '?'))
-
-parseObjectIndex :: Filter -> Parser Filter
-parseObjectIndex f = parseObjectIdIndex f <|> parseObjectGenIndex f
+                        return (GenIndex f (FLiteral (JString k)) (q == '?'))
 
 -- Indexing -- Arrays
-
-parseArrayGenIndex :: Filter -> Parser Filter
-parseArrayGenIndex f =  do
-                        _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
-                        _ <- token (char '[') 
-                        n <- nat
-                        _ <- token (char ']')
-                        q <- token (char '?') <|> return ' '
-                        return (ArrayIndex f n (q == '?'))
-
 parseArrayRange :: Filter -> Parser Filter
 parseArrayRange f = do
                     _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
                     _ <- token (char '[') 
-                    n <- nat
+                    n <- parseFilter
                     _ <- token (char ':')
-                    m <- nat
+                    m <- parseFilter
                     _ <- token (char ']')
                     q <- token (char '?') <|> return ' '
                     return (ArrayRange f n m (q == '?'))
 
-parseArrayIndex :: Filter -> Parser Filter
-parseArrayIndex f = parseArrayGenIndex f <|> parseArrayRange f
+parseIndex :: Filter -> Parser Filter
+parseIndex f = parseArrayRange f <|> parseGenIndex f <|> parseObjectIdIndex f <|> parseRecDesc f
+
+-- Comma
+parseComma :: Filter -> Parser Filter
+parseComma b =  do
+                _ <- token (char ',')
+                a <- parseFilter
+                return (FComma b a)
+
+-- Pipe
+parsePipe :: Filter -> Parser Filter
+parsePipe b = do
+              _ <- token (char '|')
+              a <- parseFilter
+              return (FPipe b a)
 
 -- Filter
 parseBinOp :: Filter -> Parser Filter
 parseBinOp f =  do
-                x <- parseObjectIndex f <|> parseArrayIndex f
+                x <- parseIndex f <|> parseComma f <|> parsePipe f -- BinOp List
                 y <- parseBinOp x <|> return x
                 return y
 
 
 parseFilter :: Parser Filter
 parseFilter = do 
-              x <- parseParenthesis <|> parseIdentity
+              x <- parseParenthesis <|> parseRecDesc Identity <|> parseIdentity <|> parseLiterals -- statement list
               y <- parseBinOp x <|> return x
               return y
 

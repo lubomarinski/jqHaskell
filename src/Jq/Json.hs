@@ -11,7 +11,8 @@ data JSON =
     JString String |
     JBool Bool |
     JArray [JSON] |
-    JObject [(String, JSON)]
+    JObject [(String, JSON)] |
+    JNothing
 
 nestedShow :: Int -> JSON -> String
 nestedShow level (JArray js) = "[" ++ foldr (\j s -> (if s == "" then "" else s ++ ",") ++ "\n" ++ concat (take level (repeat "  ")) ++ j) "" (map (nestedShow (level + 1)) (reverse js)) ++ (if length js > 0 then "\n" ++ concat (take (level - 1) (repeat "  ")) else "") ++ "]" 
@@ -42,6 +43,7 @@ instance Show JSON where
   show (JBool b) = if b then "true" else "false"
   show (JArray js) = nestedShow 1 (JArray js)
   show (JObject jo) = nestedShow 1 (JObject jo)
+  show (JNothing) = ""
 
 
 instance Eq JSON where
@@ -51,6 +53,7 @@ instance Eq JSON where
   JBool x == JBool y = x == y
   JArray x == JArray y = x == y
   JObject x == JObject y = x == y
+  JNothing == JNothing = True
   _ == _ = False
 
 
