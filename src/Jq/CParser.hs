@@ -57,9 +57,9 @@ parseFArrayRange :: Filter -> Parser (Bool -> Filter)
 parseFArrayRange f = do
                     _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
                     _ <- token (char '[') 
-                    n <- parseFilter
+                    n <- parseFilter <|> return (FLiteral JNothing)
                     _ <- token (char ':')
-                    m <- parseFilter
+                    m <- parseFilter <|> if n == FLiteral JNothing then empty else return (FLiteral JNothing)
                     _ <- token (char ']')
                     return (FArrayRange f n m)
 
