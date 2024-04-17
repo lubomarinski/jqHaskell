@@ -24,9 +24,11 @@ compile (FGenIndex f i q) inp =
                     (JObject pairs) -> case (find (\(s, _) -> s == k) pairs) of
                         Just (_, j) -> [Right j]
                         _ -> [Right JNull]
+                    (JNull) -> [Right JNull]
                     _ -> if q then [] else [Left ("Cannot access property '" ++ k ++ "'. Not an object")] 
                 (JNumber n _) -> case x of
                     (JArray arr) -> [Right (arr !! (round n))]
+                    (JNull) -> [Right JNull]
                     _ -> if q then [] else [Left ("Cannot access item " ++ show n ++ ". Not an array")]
 compile (FArrayRange f fn fm q) inp =  
     case (compile fn inp, compile fm inp) of
