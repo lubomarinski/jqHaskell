@@ -79,7 +79,7 @@ parseRecDesc f =  do
 parseComma :: Filter -> Parser Filter
 parseComma b =  do
                 _ <- token (char ',')
-                a <- parseFilter
+                a <- parseWithComma
                 return (FComma b a)
 
 -- Pipe
@@ -100,7 +100,7 @@ parseFArray = do
 -- Object
 parseFObjectPair :: Parser [(Filter, Filter)]
 parseFObjectPair =  do
-                    let parseFullPair = (parseSingular <|> parseStringIdentifier) >>= \k -> token (char ':') >>= \_ -> parseSingular >>= \v -> return (k, v)
+                    let parseFullPair = (parseStatement <|> parseStringIdentifier) >>= \k -> token (char ':') >>= \_ -> parseStatement >>= \v -> return (k, v)
                     let parseIdPair = parseStringIdentifier >>= \k -> return (k, FLiteral JNothing)
                     p <- parseFullPair <|> parseIdPair
                     return [p]                     
@@ -114,29 +114,30 @@ parseFObject =  do
                 return (FObject (p ++ (concat ps)))
 
 -- Filter
-parseSingExt :: Filter -> Parser Filter
-parseSingExt f =  do
-                  x <- parseIndex f <|> parseRecDesc f -- parseSingExt List
-                  y <- parseSingExt x <|> return x
-                  return y
+parseRepeating :: Filter -> [Filter -> Parser Filter] -> (Parser Filter)
+parseRepeating f rs = do
+                      x <- foldr (\r a -> r f <|> a) empty rs 
+                      y <- parseRepeating x rs <|> return x
+                      return y
 
-parseSingular :: Parser Filter
-parseSingular = do 
-                x <- parseFParenthesis <|> parseRecDesc FIdentity <|> parseFIdentity <|> parseLiterals <|> parseFArray <|> parseFObject -- statement list
-                y <- parseSingExt x <|> return x
-                return y
+parseSingular :: (Parser Filter) -> [Filter -> Parser Filter] -> (Parser Filter)
+parseSingular sing rs = do
+                        x <- sing
+                        y <- parseRepeating x rs <|> return x
+                        return y
 
-parseBinOp :: Filter -> Parser Filter
-parseBinOp f =  do
-                x <- parseComma f <|> parsePipe f -- BinOp List
-                y <- parseBinOp x <|> return x
-                return y
+
+parseStatement :: Parser Filter
+parseStatement = parseSingular (parseFParenthesis <|> parseRecDesc FIdentity <|> parseFIdentity <|> parseLiterals <|> parseFArray <|> parseFObject) [parseIndex, parseRecDesc]
+
+parseWithComma :: Parser Filter
+parseWithComma =  parseSingular parseStatement [parseComma]
+
+parseWithPipe :: Parser Filter
+parseWithPipe = parseSingular parseWithComma [parsePipe]
 
 parseFilter :: Parser Filter
-parseFilter = do 
-              x <- parseSingular
-              y <- parseBinOp x <|> return x
-              return y
+parseFilter = parseWithPipe
 
 
 
