@@ -7,6 +7,7 @@ module Parsing.Parsing (module Parsing.Parsing, module Control.Applicative) wher
 import Control.Applicative
 import Data.Char
 import Jq.NumFormat
+import Numeric
 
 -- Basic definitions
 
@@ -125,6 +126,30 @@ symbol xs = token (string xs)
 
 
 -- String
+intToHexStr :: Int -> Int -> String
+intToHexStr n l = (replicate (l - (length hexStr)) '0') ++ hexStr
+  where hexStr = (showIntAtBase 16 intToDigit n "")  
+
+encodeString :: String -> String
+encodeString ('\\':'u':h1:h2:h3:h4:xs) = case readHex [h1,h2,h3,h4] of
+    [(n, _)] -> chr n : encodeString xs
+    _ -> encodeString xs
+encodeString (x:xs) = x : encodeString xs
+encodeString [] = []
+
+escapeControlChar :: Char -> String
+escapeControlChar c 
+  | d == 8  = "\\b"
+  | d == 9  = "\\t"
+  | d == 10 = "\\n"
+  | d == 12 = "\\f"
+  | d == 13 = "\\r"
+  -- | d == 34 = "\\\""
+  -- | d == 92 = "\\\\"
+  | d < 32 = "\\u" ++ (intToHexStr d 4)
+  | otherwise = [c]
+  where d = ord c
+
 sitem :: Parser String
 sitem = do
         x <- item
@@ -141,7 +166,7 @@ parseString :: Parser String
 parseString =  do 
                 _ <- char '\"'
                 s <- parseStringContent
-                return s
+                return ((encodeString s) >>= escapeControlChar)
 
 -- Number
 parseDouble :: Parser (Double, NumFormat)

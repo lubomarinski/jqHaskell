@@ -19,36 +19,10 @@ nestedShow level (JArray js) = "[" ++ foldr (\j s -> (if s == "" then "" else s 
 nestedShow level (JObject jo) = "{" ++ foldr (\j s -> (if s == "" then "" else s ++ ",") ++ "\n" ++ concat (take level (repeat "  ")) ++ j) "" (map (\(k, v)-> show (JString k) ++ ": " ++ nestedShow (level + 1) v) (reverse jo)) ++ (if length jo > 0 then "\n" ++ concat (take (level - 1) (repeat "  ")) else "") ++ "}" 
 nestedShow _ other = show other
 
-intToHexStr :: Int -> Int -> String
-intToHexStr n l = (replicate (l - (length hexStr)) '0') ++ hexStr
-  where hexStr = (showIntAtBase 16 intToDigit n "")  
-
-encodeString :: String -> String
-encodeString ('\\':'u':h1:h2:h3:h4:xs) = case readHex [h1,h2,h3,h4] of
-    [(n, _)] -> chr n : encodeString xs
-    _ -> encodeString xs
-encodeString (x:xs) = x : encodeString xs
-encodeString [] = []
-
-
-escapeControlChar :: Char -> String
-escapeControlChar c 
-  | d == 8  = "\\b"
-  | d == 9  = "\\t"
-  | d == 10 = "\\n"
-  | d == 12 = "\\f"
-  | d == 13 = "\\r"
-  -- | d == 34 = "\\\""
-  -- | d == 92 = "\\\\"
-  | d < 32 = "\\u" ++ (intToHexStr d 4)
-  | otherwise = [c]
-  where d = ord c
-
-
 instance Show JSON where
   show (JNull) = "null"
   show (JNumber n nf) = showNF n nf
-  show (JString s) = "\"" ++ ((encodeString s) >>= escapeControlChar) ++ "\""
+  show (JString s) = "\"" ++ s ++ "\""
   show (JBool b) = if b then "true" else "false"
   show (JArray js) = nestedShow 1 (JArray js)
   show (JObject jo) = nestedShow 1 (JObject jo)
