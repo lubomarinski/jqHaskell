@@ -30,7 +30,6 @@ compile (FGenIndex f i q) inp =
                 JNothing -> case x of
                     (JObject pairs) -> map (\(_, j) -> Right j) pairs
                     (JArray arr) -> map (\elem -> Right elem) arr
-                    (JString s) -> map (\elem -> Right (JString [elem])) s
                     _ -> if q then [] else [Left ("Cannot iterate over value. Not an object or an array")] 
                 (JString k) -> case x of
                     (JObject pairs) -> case (find (\(s, _) -> s == k) pairs) of
