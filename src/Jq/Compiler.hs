@@ -8,11 +8,11 @@ import           Data.List (find)
 type JProgram a = JSON -> Either String a
 
 compile :: Filter -> JProgram [JSON]
-compile (Identity) inp =            
+compile (FIdentity) inp =            
     return [inp]
-compile (Parenthesis f) inp =       
+compile (FParenthesis f) inp =       
     compile f inp
-compile (GenIndex f i q) inp =      
+compile (FGenIndex f i q) inp =      
     let compiledIndex = compile i inp
     in  compile f inp >>= \xs -> sequence $ xs >>= \x -> 
             sequence $ compiledIndex >>= \ys -> sequence $ ys >>= \y -> case y of
@@ -28,7 +28,7 @@ compile (GenIndex f i q) inp =
                 (JNumber n _) -> case x of
                     (JArray arr) -> [Right (arr !! (round n))]
                     _ -> if q then [] else [Left ("Cannot access item " ++ show n ++ ". Not an array")]
-compile (ArrayRange f fn fm q) inp =  
+compile (FArrayRange f fn fm q) inp =  
     case (compile fn inp, compile fm inp) of
         (Right [(JNumber nd _)], Right [JNumber md _]) -> 
             let n = round nd
@@ -40,11 +40,11 @@ compile (ArrayRange f fn fm q) inp =
 compile (FLiteral j) inp = Right [j]
 compile (FComma b a) inp = sequence $ (sequence $ compile b inp) ++ (sequence $ compile a inp)
 compile (FPipe b a) inp = compile b inp >>= \xs -> sequence $ xs >>= \x -> sequence $ compile a x
-compile (FRecDesc f) inp = sequence $ sequence (compile f inp) ++ (sequence $ compile (GenIndex f (FLiteral JNothing) True) inp >>= \xs -> sequence $ xs >>= \x -> sequence $ compile (FRecDesc Identity) x)
+compile (FRecDesc f) inp = sequence $ sequence (compile f inp) ++ (sequence $ compile (FGenIndex f (FLiteral JNothing) True) inp >>= \xs -> sequence $ xs >>= \x -> sequence $ compile (FRecDesc FIdentity) x)
 compile (FArray f) inp = compile f inp >>= \xs -> Right [JArray xs]
 compile (FObject fps) inp = 
     let pairVariants = sequence $ map (\(k, v) -> [compile k inp, compile v inp]) fps >>= \p -> case p of
-            [Right [JString s], Right [JNothing]] -> [compile (GenIndex Identity (FLiteral (JString s)) False) inp >>= \jvs -> Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
+            [Right [JString s], Right [JNothing]] -> [compile (FGenIndex FIdentity (FLiteral (JString s)) False) inp >>= \jvs -> Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
             [Right [JString s], Right jvs] -> [Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
             _ -> [Left "Cannot compile object constructor"]
     in pairVariants >>= \pvs -> Right (map (\ps -> JObject ps) (sequence pvs))
