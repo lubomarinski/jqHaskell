@@ -19,6 +19,7 @@ compile (FGenIndex f i q) inp =
                 JNothing -> case x of
                     (JObject pairs) -> map (\(_, j) -> Right j) pairs
                     (JArray arr) -> map (\elem -> Right elem) arr
+                    (JString s) -> map (\elem -> Right (JString [elem])) s
                     _ -> if q then [] else [Left ("Cannot iterate over value. Not an object or an array")] 
                 (JString k) -> case x of
                     (JObject pairs) -> case (find (\(s, _) -> s == k) pairs) of
@@ -28,6 +29,7 @@ compile (FGenIndex f i q) inp =
                     _ -> if q then [] else [Left ("Cannot access property '" ++ k ++ "'. Not an object")] 
                 (JNumber n _) -> case x of
                     (JArray arr) -> [Right (arr !! (round n))]
+                    (JString s) -> [Right (JString [(s !! (round n))])]
                     (JNull) -> [Right JNull]
                     _ -> if q then [] else [Left ("Cannot access item " ++ show n ++ ". Not an array")]
 compile (FArrayRange f fn fm q) inp =  
@@ -37,6 +39,7 @@ compile (FArrayRange f fn fm q) inp =
                 m = round md
             in  compile f inp >>= \xs -> sequence $ xs >>= \x -> case x of 
                     (JArray arr) -> [Right (JArray (take (m - n) $ drop n $ arr))]
+                    (JString s) -> [Right (JString (take (m - n) $ drop n $ s))]
                     (JNull) -> [Right JNull]
                     _ -> if q then [] else [Left ("Cannot access items " ++ show n ++ " and " ++ show m ++ ". Not an array")]
         _ -> Left "Cannot compile array range indices"
