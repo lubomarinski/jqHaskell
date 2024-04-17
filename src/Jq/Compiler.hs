@@ -40,8 +40,6 @@ compile (FGenIndex f i q) inp =
                 (JNumber n _) -> case x of
                     (JArray arr) -> if n1 < 0 || n1 >= length arr then [Right JNull] else [Right (arr !! n1)]
                         where n1 = (if round n < 0 then round n + (length arr) else round n)
-                    (JString s) -> if n1 < 0 || n1 >= length s then [Right JNull] else [Right (JString [(s !! n1)])]
-                        where n1 = (if round n < 0 then round n + (length s) else round n)
                     (JNull) -> [Right JNull]
                     _ -> if q then [] else [Left ("Cannot access item " ++ show n ++ ". Not an array")]
 compile (FArrayRange f fn fm q) inp =  
