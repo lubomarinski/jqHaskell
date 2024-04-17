@@ -23,6 +23,12 @@ intToHexStr :: Int -> Int -> String
 intToHexStr n l = (replicate (l - (length hexStr)) '0') ++ hexStr
   where hexStr = (showIntAtBase 16 intToDigit n "")  
 
+encodeString :: String -> [String]
+-- escapeControlChar ('\\':'u':h1:h2:h3:h4:xs) = intToHexStr (read h1:h2:h3:h4:"") 4 
+encodeString (x:xs) = escapeControlChar x : encodeString xs
+encodeString [] = []
+
+
 escapeControlChar :: Char -> String
 escapeControlChar c 
   | d == 8  = "\\b"
@@ -31,18 +37,16 @@ escapeControlChar c
   | d == 12 = "\\f"
   | d == 13 = "\\r"
   | d == 34 = "\\\""
-  | d == 92 = "\\\\"
+  -- | d == 92 = "\\\\"
   | d < 32 = "\\u" ++ (intToHexStr d 4)
   | otherwise = [c]
   where d = ord c
 
--- encodeString :: String -> String
--- encodeString ('\\':x:xs) = ''++xs
 
 instance Show JSON where
   show (JNull) = "null"
   show (JNumber n nf) = showNF n nf
-  show (JString s) = "\"" ++ (s >>= escapeControlChar) ++ "\""
+  show (JString s) = "\"" ++ concat (encodeString s) ++ "\""
   show (JBool b) = if b then "true" else "false"
   show (JArray js) = nestedShow 1 (JArray js)
   show (JObject jo) = nestedShow 1 (JObject jo)
