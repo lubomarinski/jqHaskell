@@ -93,7 +93,7 @@ parsePipe b = do
 parseFArray :: Parser Filter
 parseFArray = do
                 _ <- token (char '[')
-                f <- parseFilter
+                f <- parseFilter <|> return (FLiteral JNothing)
                 _ <- token (char ']')
                 return (FArray f)
 
