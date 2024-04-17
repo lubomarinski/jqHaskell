@@ -12,7 +12,8 @@ data Filter =
   FPipe Filter Filter |
   FRecDesc Filter |
   FArray Filter |
-  FObject [(Filter, Filter)]
+  FObject [(Filter, Filter)] |
+  FTryCatch Filter Filter
 
 
 instance Show Filter where
@@ -31,6 +32,7 @@ instance Eq Filter where
   (FRecDesc x) == (FRecDesc y) = x == y
   (FArray x) == (FArray y) = x == y
   (FObject x) == (FObject y) = x == y
+  (FPipe xt xc) == (FPipe yt yc) = (xt == yt) && (xc == yc)
   _ == _ = False
 
 data Config = ConfigC {filters :: Filter}

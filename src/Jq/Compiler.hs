@@ -61,6 +61,9 @@ compile (FObject fps) inp =
             [Right [JString s], Right jvs] -> [Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
             _ -> [Left "Cannot compile object constructor"]
     in pairVariants >>= \pvs -> Right (map (\ps -> JObject (sortBy (\(k1, _) (k2, _) -> compare k1 k2) ps)) (sequence pvs))
+compile (FTryCatch t c) inp =   case (compile t inp) of
+                                    (Left _) -> compile c inp
+                                    res -> res
 
 
 run :: JProgram [JSON] -> JSON -> Either String [JSON]

@@ -113,6 +113,15 @@ parseFObject =  do
                 _ <- token (char '}')
                 return (FObject (p ++ (concat ps)))
 
+-- Try Catch
+parseFTryCatch :: Parser Filter
+parseFTryCatch =  do
+                  _ <- symbol "try"
+                  t <- parseFilter
+                  _ <- symbol "catch"
+                  c <- parseFilter
+                  return (FTryCatch t c)
+
 -- Filter
 parseRepeating :: Filter -> [Filter -> Parser Filter] -> (Parser Filter)
 parseRepeating f rs = do
@@ -128,7 +137,7 @@ parseSingular sing rs = do
 
 
 parseStatement :: Parser Filter
-parseStatement = parseSingular (parseFParenthesis <|> parseRecDesc FIdentity <|> parseFIdentity <|> parseLiterals <|> parseFArray <|> parseFObject) [parseIndex, parseRecDesc]
+parseStatement = parseSingular (parseFParenthesis <|> parseRecDesc FIdentity <|> parseFIdentity <|> parseLiterals <|> parseFArray <|> parseFObject <|> parseFTryCatch) [parseIndex, parseRecDesc]
 
 parseWithComma :: Parser Filter
 parseWithComma =  parseSingular parseStatement [parseComma]
