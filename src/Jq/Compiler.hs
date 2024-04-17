@@ -37,6 +37,7 @@ compile (FArrayRange f fn fm q) inp =
                 m = round md
             in  compile f inp >>= \xs -> sequence $ xs >>= \x -> case x of 
                     (JArray arr) -> [Right (JArray (take (m - n) $ drop n $ arr))]
+                    (JNull) -> [Right JNull]
                     _ -> if q then [] else [Left ("Cannot access items " ++ show n ++ " and " ++ show m ++ ". Not an array")]
         _ -> Left "Cannot compile array range indices"
 compile (FLiteral j) inp = Right [j]
