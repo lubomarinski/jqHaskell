@@ -2,7 +2,7 @@ module Jq.Compiler where
 
 import           Jq.Filters
 import           Jq.Json
-import           Data.List (find)
+import           Data.List (find, sortBy)
 
 
 type JProgram a = JSON -> Either String a
@@ -47,7 +47,7 @@ compile (FObject fps) inp =
             [Right [JString s], Right [JNothing]] -> [compile (FGenIndex FIdentity (FLiteral (JString s)) False) inp >>= \jvs -> Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
             [Right [JString s], Right jvs] -> [Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
             _ -> [Left "Cannot compile object constructor"]
-    in pairVariants >>= \pvs -> Right (map (\ps -> JObject ps) (sequence pvs))
+    in pairVariants >>= \pvs -> Right (map (\ps -> JObject (sortBy (\(k1, _) (k2, _) -> compare k1 k2) ps)) (sequence pvs))
 
 
 run :: JProgram [JSON] -> JSON -> Either String [JSON]

@@ -36,6 +36,9 @@ escapeControlChar c
   | otherwise = [c]
   where d = ord c
 
+-- encodeString :: String -> String
+-- encodeString ('\\':x:xs) = ''++xs
+
 instance Show JSON where
   show (JNull) = "null"
   show (JNumber n nf) = showNF n nf
