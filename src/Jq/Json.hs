@@ -38,7 +38,7 @@ escapeControlChar c
   | d == 10 = "\\n"
   | d == 12 = "\\f"
   | d == 13 = "\\r"
-  | d == 34 = "\\\""
+  -- | d == 34 = "\\\""
   -- | d == 92 = "\\\\"
   | d < 32 = "\\u" ++ (intToHexStr d 4)
   | otherwise = [c]
