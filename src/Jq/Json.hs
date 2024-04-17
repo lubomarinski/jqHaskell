@@ -24,7 +24,9 @@ intToHexStr n l = (replicate (l - (length hexStr)) '0') ++ hexStr
   where hexStr = (showIntAtBase 16 intToDigit n "")  
 
 encodeString :: String -> [String]
--- escapeControlChar ('\\':'u':h1:h2:h3:h4:xs) = intToHexStr (read h1:h2:h3:h4:"") 4 
+encodeString ('\\':'u':h1:h2:h3:h4:xs) = case readHex [h1,h2,h3,h4] of
+    [(n, _)] -> [chr n] : encodeString xs
+    _ -> encodeString xs
 encodeString (x:xs) = escapeControlChar x : encodeString xs
 encodeString [] = []
 
