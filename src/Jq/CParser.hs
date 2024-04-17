@@ -17,7 +17,6 @@ parseLiterals = do
                 l <- parseJNull <|> parseJNumber <|> parseJString <|> parseJBool
                 return (FLiteral l)
 
-
 -- FIdentity
 parseFIdentity :: Parser Filter
 parseFIdentity = do
@@ -38,31 +37,23 @@ isGenIndexable (FComma _ _) = False
 isGenIndexable (FPipe _ _) = False
 isGenIndexable _ = True 
 
-
-parseGenIndex :: Filter -> Parser Filter
+parseGenIndex :: Filter -> Parser (Bool -> Filter)
 parseGenIndex f = do
                   _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
                   _ <- token (char '[') 
                   i <- parseFilter <|> return (FLiteral JNothing)
                   _ <- token (char ']')
-                  q <- token (char '?') <|> return ' '
-                  return (FGenIndex f i (q == '?'))
-
-parseRecDesc :: Filter -> Parser Filter
-parseRecDesc f =  do
-                  _ <- symbol ".."
-                  return (FRecDesc f)
+                  return (FGenIndex f i)
 
 -- Indexing -- Objects
-parseObjectIdIndex :: Filter -> Parser Filter
+parseObjectIdIndex :: Filter -> Parser (Bool -> Filter)
 parseObjectIdIndex f =  do
                         _ <- token (char '.') <|> (if f == FIdentity then return '.' else empty)
                         i <- parseStringIdentifier
-                        q <- token (char '?') <|> return ' '
-                        return (FGenIndex f i (q == '?'))
+                        return (FGenIndex f i)
 
 -- Indexing -- Arrays
-parseFArrayRange :: Filter -> Parser Filter
+parseFArrayRange :: Filter -> Parser (Bool -> Filter)
 parseFArrayRange f = do
                     _ <- token (char '.') <|> (if isGenIndexable f then return '.' else empty)
                     _ <- token (char '[') 
@@ -70,11 +61,19 @@ parseFArrayRange f = do
                     _ <- token (char ':')
                     m <- parseFilter
                     _ <- token (char ']')
-                    q <- token (char '?') <|> return ' '
-                    return (FArrayRange f n m (q == '?'))
+                    return (FArrayRange f n m)
 
 parseIndex :: Filter -> Parser Filter
-parseIndex f = parseFArrayRange f <|> parseGenIndex f <|> parseObjectIdIndex f <|> parseRecDesc f
+parseIndex f =  do 
+                i <- parseFArrayRange f <|> parseGenIndex f <|> parseObjectIdIndex f
+                q <- token (char '?') <|> return ' '
+                return (i (q == '?'))
+
+-- Recursive Descent
+parseRecDesc :: Filter -> Parser Filter
+parseRecDesc f =  do
+                  _ <- symbol ".."
+                  return (FRecDesc f)
 
 -- Comma
 parseComma :: Filter -> Parser Filter
@@ -117,7 +116,7 @@ parseFObject =  do
 -- Filter
 parseSingExt :: Filter -> Parser Filter
 parseSingExt f =  do
-                  x <- parseIndex f -- parseSingExt List
+                  x <- parseIndex f <|> parseRecDesc f -- parseSingExt List
                   y <- parseSingExt x <|> return x
                   return y
 
