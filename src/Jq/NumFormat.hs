@@ -8,7 +8,7 @@ data NumFormat = NFDouble Int | NFE
 
 
 reformatE :: String -> String
-reformatE ('.':'0':'e':xs) = ".E+" ++ xs
+reformatE ('.':'0':'e':xs) = "E+" ++ xs
 reformatE ('e':xs) = "E+" ++ xs
 reformatE (x:xs) = x : (reformatE xs)
 reformatE [] = []
