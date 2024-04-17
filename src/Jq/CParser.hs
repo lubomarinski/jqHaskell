@@ -5,6 +5,12 @@ import Jq.Filters
 import Jq.Json
 import Jq.JParser
 
+-- General
+parseStringIdentifier :: Parser Filter
+parseStringIdentifier = do
+                        i <- identifier <|> parseString
+                        return (FLiteral (JString i))
+
 -- Literals
 parseLiterals :: Parser Filter
 parseLiterals = do
@@ -27,7 +33,6 @@ parseParenthesis =  do
                     return (Parenthesis f)
 
 -- Indexing
-
 isGenIndexable :: Filter -> Bool
 isGenIndexable Identity = True
 isGenIndexable (Parenthesis _) = True
@@ -54,9 +59,9 @@ parseRecDesc f =  do
 parseObjectIdIndex :: Filter -> Parser Filter
 parseObjectIdIndex f =  do
                         _ <- token (char '.') <|> (if f == Identity then return '.' else empty)
-                        k <- identifier <|> parseString
+                        i <- parseStringIdentifier
                         q <- token (char '?') <|> return ' '
-                        return (GenIndex f (FLiteral (JString k)) (q == '?'))
+                        return (GenIndex f i (q == '?'))
 
 -- Indexing -- Arrays
 parseArrayRange :: Filter -> Parser Filter
@@ -87,17 +92,52 @@ parsePipe b = do
               a <- parseFilter
               return (FPipe b a)
 
+-- Array
+parseFArray :: Parser Filter
+parseFArray = do
+                _ <- token (char '[')
+                f <- parseFilter
+                _ <- token (char ']')
+                return (FArray f)
+
+-- Object
+parseFObjectPair :: Parser [(Filter, Filter)]
+parseFObjectPair =  do
+                    let parseFullPair = (parseSingular <|> parseStringIdentifier) >>= \k -> token (char ':') >>= \_ -> parseSingular >>= \v -> return (k, v)
+                    let parseIdPair = parseStringIdentifier >>= \k -> return (k, FLiteral JNothing)
+                    p <- parseFullPair <|> parseIdPair
+                    return [p]                     
+
+parseFObject :: Parser Filter
+parseFObject =  do
+                _ <- token (char '{')
+                ps <- many (parseFObjectPair >>= \p -> token (char ',') >>= \_ -> return p)
+                p <- parseFObjectPair <|> if length ps > 0 then empty else return []
+                _ <- token (char '}')
+                return (FObject (p ++ (concat ps)))
+
 -- Filter
+parseSingExt :: Filter -> Parser Filter
+parseSingExt f =  do
+                  x <- parseIndex f -- parseSingExt List
+                  y <- parseSingExt x <|> return x
+                  return y
+
+parseSingular :: Parser Filter
+parseSingular = do 
+                x <- parseParenthesis <|> parseRecDesc Identity <|> parseIdentity <|> parseLiterals <|> parseFArray <|> parseFObject -- statement list
+                y <- parseSingExt x <|> return x
+                return y
+
 parseBinOp :: Filter -> Parser Filter
 parseBinOp f =  do
-                x <- parseIndex f <|> parseComma f <|> parsePipe f -- BinOp List
+                x <- parseComma f <|> parsePipe f -- BinOp List
                 y <- parseBinOp x <|> return x
                 return y
 
-
 parseFilter :: Parser Filter
 parseFilter = do 
-              x <- parseParenthesis <|> parseRecDesc Identity <|> parseIdentity <|> parseLiterals -- statement list
+              x <- parseSingular
               y <- parseBinOp x <|> return x
               return y
 

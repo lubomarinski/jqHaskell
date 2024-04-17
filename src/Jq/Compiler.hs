@@ -41,6 +41,14 @@ compile (FLiteral j) inp = Right [j]
 compile (FComma b a) inp = sequence $ (sequence $ compile b inp) ++ (sequence $ compile a inp)
 compile (FPipe b a) inp = compile b inp >>= \xs -> sequence $ xs >>= \x -> sequence $ compile a x
 compile (FRecDesc f) inp = sequence $ sequence (compile f inp) ++ (sequence $ compile (GenIndex f (FLiteral JNothing) True) inp >>= \xs -> sequence $ xs >>= \x -> sequence $ compile (FRecDesc Identity) x)
+compile (FArray f) inp = compile f inp >>= \xs -> Right [JArray xs]
+compile (FObject fps) inp = 
+    let pairVariants = sequence $ map (\(k, v) -> [compile k inp, compile v inp]) fps >>= \p -> case p of
+            [Right [JString s], Right [JNothing]] -> [compile (GenIndex Identity (FLiteral (JString s)) False) inp >>= \jvs -> Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
+            [Right [JString s], Right jvs] -> [Right (sequence [[JString s], jvs] >>= \[JString k, jv] -> [(k, jv)])]
+            _ -> [Left "Cannot compile object constructor"]
+    in pairVariants >>= \pvs -> Right (map (\ps -> JObject ps) (sequence pvs))
+
 
 run :: JProgram [JSON] -> JSON -> Either String [JSON]
 run p j = p j

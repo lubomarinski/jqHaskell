@@ -10,7 +10,9 @@ data Filter =
   FLiteral JSON |
   FComma Filter Filter |
   FPipe Filter Filter |
-  FRecDesc Filter
+  FRecDesc Filter |
+  FArray Filter |
+  FObject [(Filter, Filter)]
 
 
 instance Show Filter where
