@@ -23,11 +23,11 @@ intToHexStr :: Int -> Int -> String
 intToHexStr n l = (replicate (l - (length hexStr)) '0') ++ hexStr
   where hexStr = (showIntAtBase 16 intToDigit n "")  
 
-encodeString :: String -> [String]
+encodeString :: String -> String
 encodeString ('\\':'u':h1:h2:h3:h4:xs) = case readHex [h1,h2,h3,h4] of
-    [(n, _)] -> [chr n] : encodeString xs
+    [(n, _)] -> chr n : encodeString xs
     _ -> encodeString xs
-encodeString (x:xs) = escapeControlChar x : encodeString xs
+encodeString (x:xs) = x : encodeString xs
 encodeString [] = []
 
 
@@ -48,7 +48,7 @@ escapeControlChar c
 instance Show JSON where
   show (JNull) = "null"
   show (JNumber n nf) = showNF n nf
-  show (JString s) = "\"" ++ concat (encodeString s) ++ "\""
+  show (JString s) = "\"" ++ ((encodeString s) >>= escapeControlChar) ++ "\""
   show (JBool b) = if b then "true" else "false"
   show (JArray js) = nestedShow 1 (JArray js)
   show (JObject jo) = nestedShow 1 (JObject jo)
